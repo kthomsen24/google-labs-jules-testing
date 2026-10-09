@@ -4,8 +4,9 @@ Unit and Integration Tests for VM Resource Monitor Widget
 
 import os
 import unittest
-import time
+import argparse
 from resource_collector import ResourceCollector, bytes_to_human
+from main import setup_display_environment, parse_args
 
 class TestResourceCollector(unittest.TestCase):
     def setUp(self):
@@ -65,6 +66,23 @@ class TestResourceCollector(unittest.TestCase):
             self.assertIn("fraction_used", dev)
             self.assertGreaterEqual(dev["fraction_used"], 0.0)
             self.assertLessEqual(dev["fraction_used"], 1.0)
+
+class TestCLIAndEnvironment(unittest.TestCase):
+    def test_wayland_flag_configuration(self):
+        args = argparse.Namespace(wayland=True, xwayland=False, display=None, interval=300)
+        setup_display_environment(args)
+        self.assertEqual(os.environ.get("GDK_BACKEND"), "wayland,x11")
+        self.assertEqual(os.environ.get("QT_QPA_PLATFORM"), "wayland;xcb")
+
+    def test_custom_display_flag(self):
+        args = argparse.Namespace(wayland=False, xwayland=False, display=":42", interval=250)
+        setup_display_environment(args)
+        self.assertEqual(os.environ.get("DISPLAY"), ":42")
+
+    def test_xwayland_flag_configuration(self):
+        args = argparse.Namespace(wayland=False, xwayland=True, display=None, interval=300)
+        setup_display_environment(args)
+        self.assertIsNotNone(os.environ.get("DISPLAY"))
 
 if __name__ == "__main__":
     unittest.main()
